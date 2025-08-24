@@ -18,7 +18,10 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
+<<<<<<< HEAD
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
+=======
+>>>>>>> ca4fc008d6219a6ce8c7cdfdcfed11128590981b
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
@@ -37,6 +40,7 @@ type ActionType = typeof actionTypes
 
 type Action =
   | {
+<<<<<<< HEAD
     type: ActionType["ADD_TOAST"]
     toast: ToasterToast
   }
@@ -52,6 +56,23 @@ type Action =
     type: ActionType["REMOVE_TOAST"]
     toastId?: ToasterToast["id"]
   }
+=======
+      type: ActionType["ADD_TOAST"]
+      toast: ToasterToast
+    }
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<ToasterToast>
+    }
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: ToasterToast["id"]
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: ToasterToast["id"]
+    }
+>>>>>>> ca4fc008d6219a6ce8c7cdfdcfed11128590981b
 
 interface State {
   toasts: ToasterToast[]
@@ -109,9 +130,15 @@ export const reducer = (state: State, action: Action): State => {
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
             ? {
+<<<<<<< HEAD
               ...t,
               open: false,
             }
+=======
+                ...t,
+                open: false,
+              }
+>>>>>>> ca4fc008d6219a6ce8c7cdfdcfed11128590981b
             : t
         ),
       }

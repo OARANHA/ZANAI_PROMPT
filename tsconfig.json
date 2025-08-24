@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+<<<<<<< HEAD
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -14,10 +15,38 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+=======
+    "module": "commonjs",
+    "target": "ES2020",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "esModuleInterop": true,
+    "outDir": "out",
+    "lib": [
+      "ES2020"
+    ],
+    "sourceMap": true,
+    "rootDir": "src",
+    "strict": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+>>>>>>> ca4fc008d6219a6ce8c7cdfdcfed11128590981b
     "plugins": [
       {
         "name": "next"
       }
+<<<<<<< HEAD
     ],
     "paths": {
       "@/*": ["./src/*"]
@@ -25,4 +54,18 @@
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
+=======
+    ]
+  },
+  "exclude": [
+    "node_modules",
+    ".vscode-test"
+  ],
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ]
+>>>>>>> ca4fc008d6219a6ce8c7cdfdcfed11128590981b
 }
