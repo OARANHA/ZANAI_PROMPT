@@ -1,88 +1,105 @@
-import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { NextRequest, NextResponse } from 'next/server'
 
-interface ZAIConfig {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-  maxTokens: number;
-  temperature: number;
-  provider?: string;
-  apiType?: string;
+// Configuração das APIs
+const API_CONFIG = {
+  openai: {
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    key: process.env.OPENAI_API_KEY || '',
+    model: 'gpt-4'
+  },
+  bigmodel: {
+    name: 'BigModel',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    key: process.env.BIGMODEL_API_KEY || '',
+    model: 'glm-4'
+  },
+  mistral: {
+    name: 'Mistral',
+    baseUrl: 'https://api.mistral.ai/v1',
+    key: process.env.MISTRAL_API_KEY || '',
+    model: 'mistral-large-latest'
+  },
+  zai: {
+    name: 'Z.ai',
+    baseUrl: 'https://api.z.ai/v1',
+    key: process.env.ZAI_API_KEY || '',
+    model: 'zai-large'
+  }
 }
 
-function loadZAIConfig(): ZAIConfig {
-  try {
-    const configPath = path.join(process.cwd(), '.z-ai-config');
-    const configData = fs.readFileSync(configPath, 'utf-8');
-    return JSON.parse(configData);
-  } catch (error) {
-    console.error('Erro ao carregar configuração .z-ai-config:', error);
-    // Fallback para configuração padrão (Mistral AI)
+// Função para verificar status de uma API
+async function checkApiStatus(apiName: keyof typeof API_CONFIG) {
+  const config = API_CONFIG[apiName]
+  
+  if (!config.key) {
     return {
-      apiKey: 'aGIuNGBSGqHQfmEUXtjruDpGXK0hYdKN',
-      baseUrl: 'https://api.mistral.ai/v1/',
-      model: 'mistral-large-latest',
-      maxTokens: 2000,
-      temperature: 0.6,
-      provider: 'mistral',
-      apiType: 'sync'
-    };
+      name: config.name,
+      available: false,
+      error: 'Chave API não configurada'
+    }
+  }
+
+  try {
+    const startTime = Date.now()
+    
+    // Tenta fazer uma requisição simples para verificar se a API está respondendo
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.key}`
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1
+      })
+    })
+
+    const latency = Date.now() - startTime
+
+    if (response.ok) {
+      return {
+        name: config.name,
+        available: true,
+        latency
+      }
+    } else {
+      return {
+        name: config.name,
+        available: false,
+        error: `HTTP ${response.status}`
+      }
+    }
+  } catch (error) {
+    return {
+      name: config.name,
+      available: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    }
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const config = loadZAIConfig();
+    // Verifica status de todas as APIs em paralelo
+    const apiPromises = Object.keys(API_CONFIG).map(apiName => 
+      checkApiStatus(apiName as keyof typeof API_CONFIG)
+    )
     
-    // Não retornar a API key completa por segurança
-    const safeConfig = {
-      ...config,
-      apiKey: config.apiKey.substring(0, 20) + '...'
-    };
-
-    return NextResponse.json(safeConfig);
-  } catch (error) {
-    console.error('Erro ao obter configuração:', error);
-    return NextResponse.json(
-      { error: 'Erro ao obter configuração' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const newConfig = await request.json();
+    const apis = await Promise.all(apiPromises)
     
-    // Validar os campos necessários
-    const requiredFields = ['apiKey', 'baseUrl', 'model', 'maxTokens', 'temperature'];
-    for (const field of requiredFields) {
-      if (!newConfig[field]) {
-        return NextResponse.json(
-          { error: `Campo obrigatório ausente: ${field}` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Salvar a nova configuração
-    const configPath = path.join(process.cwd(), '.z-ai-config');
-    fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
-
-    // Retornar a configuração salva (com API key mascarada)
-    const safeConfig = {
-      ...newConfig,
-      apiKey: newConfig.apiKey.substring(0, 20) + '...'
-    };
-
-    return NextResponse.json(safeConfig);
+    return NextResponse.json({
+      success: true,
+      apis,
+      timestamp: new Date().toISOString()
+    })
   } catch (error) {
-    console.error('Erro ao salvar configuração:', error);
-    return NextResponse.json(
-      { error: 'Erro ao salvar configuração' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro interno',
+      apis: []
+    }, { status: 500 })
   }
 }

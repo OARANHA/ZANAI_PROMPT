@@ -1,36 +1,22 @@
-import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
+"use client"
+
+import { toast } from "sonner"
 
 export function useApiToast() {
-  const { toast } = useToast();
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    switch (type) {
+      case 'success':
+        toast.success(message)
+        break
+      case 'error':
+        toast.error(message)
+        break
+      case 'info':
+      default:
+        toast.info(message)
+        break
+    }
+  }
 
-  const showSuccess = (message: string) => {
-    toast({
-      title: "Sucesso",
-      description: message,
-      variant: "default",
-    });
-  };
-
-  const showError = (message: string) => {
-    toast({
-      title: "Erro",
-      description: message,
-      variant: "destructive",
-    });
-  };
-
-  const showInfo = (message: string) => {
-    toast({
-      title: "Informação",
-      description: message,
-      variant: "default",
-    });
-  };
-
-  return {
-    showSuccess,
-    showError,
-    showInfo,
-  };
+  return { showToast }
 }

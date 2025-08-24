@@ -1,258 +1,190 @@
-import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import ZAI from 'z-ai-web-dev-sdk';
+import { NextRequest, NextResponse } from 'next/server'
 
-interface ZAIConfig {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-  maxTokens: number;
-  temperature: number;
-  provider?: string;
-  apiType?: string;
+// Mock data para fallback quando APIs não estão disponíveis
+const MOCK_RESPONSES: Record<string, string> = {
+  contexto: `Empresa do agronegócio especializada em insumos agrícolas, com foco em agricultores e cooperativas. Ambiente digital em crescimento, necessidade de educar o mercado sobre novos produtos e tecnologias.`,
+  papel: `Gerente de conteúdo sênior especializado em mídias sociais para agronegócio, responsável por estratégia de conteúdo, gestão de sub-agentes (Instagram e blog) e análise de métricas de engajamento.`,
+  tarefas: `- Gerenciar sub-agente de Instagram: 3 posts/semana + stories diários
+- Gerenciar sub-agente de blog: 2 artigos/semana sobre técnicas de cultivo
+- Analisar métricas de engajamento e conversão mensalmente
+- Desenvolver estratégia de conteúdo educativo para produtos agrícolas`,
+  ferramentas: `Meta Business Suite, WordPress, Google Analytics, Canva, SEMrush, Ferramentas de design gráfico, Plataformas de agendamento`,
+  tom_de_voz: `Técnico-didático com linguagem acessível ao produtor rural, usando analogias práticas do campo, mantendo profissionalismo e clareza.`,
+  exemplos: `1. Campanha sobre adubação orgânica: Posts no Instagram mostrando antes/depois, artigo no blog explicando benefícios científicos
+2. Série sobre pragas: Stories diárias com dicas rápidas, artigo completo com métodos de controle integrado
+3. Lançamento de novo fertilizante: Vídeos demonstrativos, depoimentos de agricultores, artigo técnico com resultados`,
+  arquitetura_agente: `<sub-agente nome="Instagram_Content" tipo="content_creator">
+  <responsabilidade>Criar 3 posts semanais + stories diários</responsabilidade>
+  <plataforma>Instagram Business Suite</plataforma>
+</sub-agente>
+<sub-agente nome="Blog_Content" tipo="content_writer">
+  <responsabilidade>Produzir 2 artigos técnicos semanais</responsabilidade>
+  <plataforma>WordPress</plataforma>
+</sub-agente>`
 }
 
-function loadZAIConfig(): ZAIConfig {
-  try {
-    const configPath = path.join(process.cwd(), '.z-ai-config');
-    const configData = fs.readFileSync(configPath, 'utf-8');
-    return JSON.parse(configData);
-  } catch (error) {
-    console.error('Erro ao carregar configuração .z-ai-config:', error);
-    // Fallback para configuração padrão (BigModel)
-    return {
-      apiKey: 'ae05cfde6538494c9b66c87ef5b68439.BtCLj8iOsXqqDGbl',
-      baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
-      model: 'glm-4',
-      maxTokens: 2000,
-      temperature: 0.6,
-      provider: 'bigmodel',
-      apiType: 'sync'
-    };
+// Configuração das APIs
+const APIS = {
+  openai: {
+    url: 'https://api.openai.com/v1/chat/completions',
+    key: process.env.OPENAI_API_KEY || '',
+    model: 'gpt-4',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY || ''}`
+    }
+  },
+  bigmodel: {
+    url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    key: process.env.BIGMODEL_API_KEY || '',
+    model: 'glm-4',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.BIGMODEL_API_KEY || ''}`
+    }
+  },
+  mistral: {
+    url: 'https://api.mistral.ai/v1/chat/completions',
+    key: process.env.MISTRAL_API_KEY || '',
+    model: 'mistral-large-latest',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.MISTRAL_API_KEY || ''}`
+    }
+  },
+  zai: {
+    url: 'https://api.z.ai/v1/chat/completions',
+    key: process.env.ZAI_API_KEY || '',
+    model: 'zai-large',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.ZAI_API_KEY || ''}`
+    }
   }
 }
 
-// Função de fallback para conteúdo simulado
-function getFallbackContent(section: string, instruction: string): string {
-  const fallbacks: Record<string, string> = {
-    'papel': `Gerente de Conteúdo Sênior especializado em mídias sociais para agronegócio. Responsável por estratégia de conteúdo, gestão de equipe e análise de métricas de engajamento.`,
-    'contexto': `Loja B2B de insumos agrícolas com foco em agricultores e cooperativas. Desafio: educar mercado sobre novos produtos via conteúdo digital.`,
-    'tarefas': `- Desenvolver estratégia de conteúdo mensal para Instagram e Blog\n- Gerenciar equipe de criação com definição clara de KPIs\n- Analisar métricas de engajamento semanalmente`,
-    'ferramentas': `Meta Business Suite, WordPress, Google Analytics, Canva, HubSpot`,
-    'tom-de-voz': `Técnico-didático com linguagem acessível ao produtor rural.`,
-    'exemplos': `Exemplo 1: Campanha de fertilizantes orgânicos - Série de posts mostrando antes/depois de lavouras.`,
-    'arquitetura-agente': `<agente>
-<nome>Agente do Instagram</nome>
-<funcao>Criar conteúdo para Instagram e elementos visuais</funcao>
-</agente>
-
-<agente>
-<nome>Agente do Blog</nome>
-<funcao>Criar artigos de blog com títulos e otimização SEO</funcao>
-</agente>`
-  };
+// Função para tentar gerar conteúdo com uma API específica
+async function generateWithApi(apiName: keyof typeof APIS, systemPrompt: string, userPrompt: string) {
+  const api = APIS[apiName]
   
-  return fallbacks[section] || `Conteúdo gerado para a seção ${section} com base na instrução: ${instruction}`;
+  if (!api.key) {
+    throw new Error(`Chave da API ${apiName} não configurada`)
+  }
+
+  try {
+    const response = await fetch(api.url, {
+      method: 'POST',
+      headers: api.headers,
+      body: JSON.stringify({
+        model: api.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`API ${apiName} retornou status ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.choices[0]?.message?.content || ''
+  } catch (error) {
+    throw new Error(`Erro na API ${apiName}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+  }
+}
+
+// Função principal que tenta múltiplas APIs em ordem
+async function generateContent(instruction: string, section: string, previousContent: string) {
+  const systemPrompt = `Você é um engenheiro de prompts sênior especializado em criar agentes de IA de alta qualidade.
+
+Com base na instrução inicial e no conteúdo das seções anteriores, gere APENAS o conteúdo para a seção <${section}>.
+
+Regras importantes:
+1. Responda APENAS com o conteúdo da seção, sem incluir tags XML
+2. Seja específico, detalhado e profissional
+3. Inclua exemplos práticos quando relevante
+4. Mantenha coerência com o conteúdo anterior
+5. Use linguagem adequada para um agente de nível sênior
+
+Instrução inicial: ${instruction}
+
+Conteúdo anterior: ${previousContent}`
+
+  const userPrompt = `Gere o conteúdo para a seção ${section} com base na instrução fornecida.`
+
+  // Lista de APIs para tentar em ordem
+  const apiOrder: (keyof typeof APIS)[] = ['openai', 'bigmodel', 'mistral', 'zai']
+  
+  let lastError = ''
+  
+  // Tenta cada API em ordem
+  for (const apiName of apiOrder) {
+    try {
+      const content = await generateWithApi(apiName, systemPrompt, userPrompt)
+      if (content && content.trim()) {
+        return { success: true, content, api: apiName }
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Erro desconhecido'
+      console.warn(`Falha na API ${apiName}:`, lastError)
+      continue
+    }
+  }
+  
+  // Se todas as APIs falharem, retorna mock data
+  console.warn('Todas as APIs falharam, usando dados mock')
+  const mockContent = MOCK_RESPONSES[section] || `Conteúdo gerado para a seção ${section}.`
+  
+  return { 
+    success: true, 
+    content: mockContent, 
+    api: 'mock',
+    warning: 'Usando dados de demonstração - APIs indisponíveis'
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { instruction, section, previousContent, formatSettings } = await request.json();
+    const body = await request.json()
+    const { instruction, section, previous_content = '' } = body
 
     if (!instruction || !section) {
-      return NextResponse.json(
-        { error: 'Instrução e seção são obrigatórios' },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'Parâmetros obrigatórios ausentes: instruction e section'
+      }, { status: 400 })
     }
 
-    // Configurações de formatação padrão se não fornecidas
-    const settings = formatSettings || {
-      useSubTags: false,
-      useLists: true,
-      contentStyle: 'balanced'
-    };
-
-    // Construir o prompt do sistema com base nas configurações
-    let formatInstructions = `REGRAS IMPORTANTES:
-1. NÃO inclua a tag XML de abertura ou fechamento (como <${section}> ou </${section}>)
-2. NÃO inclua o título da seção (como "# Papel")
-3. NÃO use formatação XML aninhada ou estruturas complexas dentro do conteúdo
-4. NÃO inclua marcadores de código como \`\`\`xml
-5. Use formato de texto limpo, direto e acionável
-6. Seja conciso e objetivo, focando em informações práticas
-7. Mantenha o conteúdo em português claro e profissional`;
-
-    if (settings.useLists) {
-      formatInstructions += `\n8. Use listas com marcadores (-) para organizar informações quando apropriado`;
+    // Validação básica dos parâmetros
+    if (typeof instruction !== 'string' || typeof section !== 'string') {
+      return NextResponse.json({
+        success: false,
+        error: 'Parâmetros inválidos'
+      }, { status: 400 })
     }
 
-    if (settings.useSubTags) {
-      formatInstructions += `\n9. Use tags XML simples para estruturar subtópicos quando relevante (ex: <instagram>, <blog>)`;
-    } else {
-      formatInstructions += `\n9. NÃO use tags XML internas ou aninhamento de tags`;
-    }
+    // Gera o conteúdo usando múltiplas APIs com fallback
+    const result = await generateContent(instruction, section, previous_content)
 
-    // Ajustar instruções baseado no estilo de conteúdo
-    if (settings.contentStyle === 'direct') {
-      formatInstructions += `\n10. Seja extremamente direto e conciso, focando apenas em informações essenciais`;
-    } else if (settings.contentStyle === 'detailed') {
-      formatInstructions += `\n10. Seja detalhado e completo, fornecendo informações abrangentes e minuciosas`;
-    } else {
-      formatInstructions += `\n10. Mantenha um bom equilíbrio entre detalhe e concisão`;
-    }
+    return NextResponse.json({
+      success: true,
+      content: result.content,
+      api: result.api,
+      warning: result.warning,
+      timestamp: new Date().toISOString()
+    })
 
-    const systemPrompt = `Você é um engenheiro de prompts sênior especializado em criar prompts estruturados. Com base na instrução inicial e no conteúdo das seções anteriores, gere APENAS o conteúdo para a tag XML <${section}>.
-
-${formatInstructions}
-
-Instrução inicial: ${instruction}
-
-${previousContent ? `Conteúdo anterior das seções:\n${previousContent}` : ''}
-
-Gere um conteúdo detalhado, profissional e específico para a seção ${section}. Considere o contexto fornecido e crie um conteúdo que seja útil para guiar um assistente de IA.`;
-
-    // Usar APIs externas diretamente (sem ZAI SDK)
-  try {
-    console.log('Tentando usar APIs externas...');
+  } catch (error) {
+    console.error('Erro na API de geração de prompt:', error)
     
-    // Tentar BigModel API primeiro
-    try {
-      const bigModelResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.BIGMODEL_API_KEY || 'ae05cfde6538494c9b66c87ef5b68439.BtCLj8iOsXqqDGbl'}`
-        },
-        body: JSON.stringify({
-          model: 'glm-4',
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            {
-              role: 'user',
-              content: `Gere o conteúdo para a seção ${section} com base na instrução fornecida.`
-            }
-          ],
-          temperature: 0.6,
-          max_tokens: 2000
-        })
-      });
-
-      if (bigModelResponse.ok) {
-        const data = await bigModelResponse.json();
-        const messageContent = data.choices?.[0]?.message?.content;
-        
-        if (messageContent) {
-          console.log('Sucesso com BigModel API');
-          return NextResponse.json({ content: messageContent.trim() });
-        }
-      } else {
-        console.log('BigModel API falhou:', await bigModelResponse.text());
-      }
-    } catch (bigModelError) {
-      console.log('Erro com BigModel API:', bigModelError);
-    }
-
-    // Tentar Mistral AI
-    try {
-      const mistralResponse = await fetch('https://api.mistral.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY || 'aGIuNGBSGqHQfmEUXtjruDpGXK0hYdKN'}`
-        },
-        body: JSON.stringify({
-          model: 'mistral-large-latest',
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            {
-              role: 'user',
-              content: `Gere o conteúdo para a seção ${section} com base na instrução fornecida.`
-            }
-          ],
-          temperature: 0.6,
-          max_tokens: 2000
-        })
-      });
-
-      if (mistralResponse.ok) {
-        const data = await mistralResponse.json();
-        const messageContent = data.choices?.[0]?.message?.content;
-        
-        if (messageContent) {
-          console.log('Sucesso com Mistral AI');
-          return NextResponse.json({ content: messageContent.trim() });
-        }
-      } else {
-        console.log('Mistral AI falhou:', await mistralResponse.text());
-      }
-    } catch (mistralError) {
-      console.log('Erro com Mistral AI:', mistralError);
-    }
-
-    // Tentar OpenAI
-    try {
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY || ''}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            {
-              role: 'user',
-              content: `Gere o conteúdo para a seção ${section} com base na instrução fornecida.`
-            }
-          ],
-          temperature: 0.6,
-          max_tokens: 2000
-        })
-      });
-
-      if (openaiResponse.ok) {
-        const data = await openaiResponse.json();
-        const messageContent = data.choices?.[0]?.message?.content;
-        
-        if (messageContent) {
-          console.log('Sucesso com OpenAI');
-          return NextResponse.json({ content: messageContent.trim() });
-        }
-      } else {
-        console.log('OpenAI falhou:', await openaiResponse.text());
-      }
-    } catch (openaiError) {
-      console.log('Erro com OpenAI:', openaiError);
-    }
-
-    // Se todas as APIs falharem, usar fallback
-    console.log('Todas as APIs falharam, usando fallback simulado...');
-    const fallbackContent = getFallbackContent(section, instruction);
-    return NextResponse.json({ content: fallbackContent });
-
-  } catch (error) {
-    console.error('Erro geral:', error);
-    const fallbackContent = getFallbackContent(section, instruction);
-    return NextResponse.json({ content: fallbackContent });
-  }
-
-  } catch (error) {
-    console.error('Erro ao gerar conteúdo:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro interno ao gerar conteúdo' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro interno do servidor',
+      content: MOCK_RESPONSES[instruction.section || 'contexto'] || 'Conteúdo não disponível.'
+    }, { status: 500 })
   }
 }

@@ -1,0 +1,12 @@
+{
+  "id": "default",
+  "name": "Configuração Z.ai Original",
+  "apiKey": "d56c89e3fdd24034bd228576e2f40fd5.zfVpIPTnS55T9qRE",
+  "baseUrl": "https://api.z.ai/api/paas/v4/",
+  "model": "glm-4",
+  "maxTokens": 2000,
+  "temperature": 0.6,
+  "provider": "zai",
+  "apiType": "sync",
+  "description": "Configuração original do projeto Z.ai"
+}

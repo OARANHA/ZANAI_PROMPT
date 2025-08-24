@@ -1,112 +1,88 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { FileText, CheckCircle, ArrowRight } from 'lucide-react';
+"use client"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Play, Copy, Check } from "lucide-react"
+
+const demoInstruction = "gerente de conteúdo de mídias sociais para uma loja de insumos agrícolas"
 
 export function DemoCard() {
-  const demoPrompt = `# Papel
-<papel>
-Gerente de conteúdo sênior especializado em mídias sociais para agronegócio, responsável por estratégia de conteúdo, gestão de sub-agentes (Instagram e blog) e análise de métricas de engajamento.
-</papel>
-
-# Contexto
-<contexto>
-Loja B2B de insumos agrícolas com foco em agricultores e cooperativas. Desafio: criar conteúdo educativo que gere leads qualificados e posicione a marca como autoridade no setor.
-</contexto>
-
-# Tarefas
-<tarefas>
-- Gerenciar sub-agente de Instagram: 3 posts/semana + stories diários focados em dicas práticas
-- Gerenciar sub-agente de blog: 2 artigos/semana sobre técnicas de cultivo e novidades do setor
-- Analisar métricas de engajamento e conversão mensalmente, otimizando a estratégia conforme resultados
-- Criar campanhas sazonais para épocas de plantio e colheita
-</tarefas>
-
-# Ferramentas
-<ferramentas>
-Meta Business Suite, WordPress, Google Analytics, Canva, SEMrush, Mailchimp
-</ferramentas>
-
-# Tom de Voz
-<tom_de_voz>
-Técnico-didático com linguagem acessível ao produtor rural, usando analogias práticas do campo e evitando jargões muito técnicos. Tom amigável mas autoritativo.
-</tom_de_voz>
-
-# Exemplos
-<exemplos>
-1. Post Instagram: "5 sinais de que sua plantação de soja precisa de adubação nitrogenada 🌱"
-2. Artigo blog: "Guia completo: Como escolher o fertilizante ideal para diferentes tipos de solo"
-3. Campanha: "Webinar gratuito - Técnicas de irrigação que podem reduzir seus custos em 30%"
-4. Story série: "Pergunta ao especialista" sobre pragas comuns na região
-</exemplos>`;
+  const copyDemoInstruction = () => {
+    navigator.clipboard.writeText(demoInstruction)
+  }
 
   return (
-    <Card className="mb-6">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="w-5 h-5" />
-          Exemplo de Prompt Gerado
+          <Play className="h-5 w-5" />
+          Demonstração Rápida
         </CardTitle>
+        <CardDescription>
+          Experimente com um exemplo pronto
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-green-800">Exemplo real usando API Z.ai (glm-4.5-flash)</span>
+      <CardContent className="space-y-4">
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start justify-between mb-2">
+            <h4 className="font-medium text-sm text-blue-800 dark:text-blue-200">
+              Exemplo para Teste
+            </h4>
+            <Badge variant="secondary" className="text-xs">
+              Demo
+            </Badge>
           </div>
-          
-          <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Prompt Completo:</h4>
-              <div className="flex gap-2">
-                <Badge variant="outline">6 Seções</Badge>
-                <Badge variant="outline">XML + Markdown</Badge>
-              </div>
-            </div>
-            
-            <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap max-h-96 overflow-y-auto">
-              {demoPrompt}
-            </pre>
+          <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed mb-3">
+            {demoInstruction}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyDemoInstruction}
+              className="text-xs"
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              Copiar
+            </Button>
+            <Badge variant="outline" className="text-xs">
+              Agronegócio
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              Marketing
+            </Badge>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Características:</h4>
-              <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                <li>• Estrutura híbrida Markdown + XML</li>
-                <li>• Conteúdo detalhado e específico</li>
-                <li>• Métricas e ações definidas</li>
-                <li>• Exemplos práticos e aplicáveis</li>
-              </ul>
+        </div>
+        
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Passos para testar:</h4>
+          <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300">
+            <div className="flex items-center gap-2">
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">1</span>
+              <span>Copie o exemplo acima</span>
             </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Benefícios:</h4>
-              <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                <li>• Clareza na definição de papéis</li>
-                <li>• Contexto bem estabelecido</li>
-                <li>• Ações mensuráveis</li>
-                <li>• Tom de voz consistente</li>
-              </ul>
+            <div className="flex items-center gap-2">
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">2</span>
+              <span>Cole no campo de instrução</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">3</span>
+              <span>Clique em "Gerar Estrutura"</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">4</span>
+              <span>Use Tab para autocompletar</span>
             </div>
           </div>
-
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <ArrowRight className="w-4 h-4 text-blue-600" />
-              <span className="font-medium text-blue-800 dark:text-blue-200 text-sm">
-                Como gerar prompts como este:
-              </span>
-            </div>
-            <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
-              <li>Digite uma instrução inicial detalhada</li>
-              <li>Clique em "Gerar Estrutura"</li>
-              <li>Use Tab em cada seção para autocompletar com IA</li>
-              <li>Use Enter para navegar entre as seções</li>
-              <li>Exporte seu prompt final</li>
-            </ol>
-          </div>
+        </div>
+        
+        <div className="pt-2 border-t">
+          <p className="text-xs text-gray-500">
+            Este exemplo demonstra como criar um agente completo para gestão de mídias sociais no agronegócio.
+          </p>
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
