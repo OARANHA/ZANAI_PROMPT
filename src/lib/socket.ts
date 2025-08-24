@@ -5,10 +5,11 @@ export type SocketServer = Server
 
 // Função para criar o servidor Socket.IO
 export function createSocketServer(req: NextApiRequest, res: NextApiResponse): SocketServer {
-  if (!res.socket.server.io) {
+  const socket = res.socket as any
+  if (socket && socket.server && !socket.server.io) {
     console.log('Criando novo servidor Socket.IO...')
     
-    const io = new Server(res.socket.server, {
+    const io = new Server(socket.server, {
       path: '/api/socket',
       addTrailingSlash: false,
       cors: {
@@ -41,6 +42,7 @@ export function createSocketServer(req: NextApiRequest, res: NextApiResponse): S
           }, 2000)
 
         } catch (error) {
+          const { section } = data
           socket.emit('generation-error', {
             section,
             error: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -54,12 +56,13 @@ export function createSocketServer(req: NextApiRequest, res: NextApiResponse): S
       })
     })
 
-    res.socket.server.io = io
+    socket.server.io = io
   } else {
     console.log('Servidor Socket.IO já existe')
   }
 
-  return res.socket.server.io
+  const serverSocket = res.socket as any
+  return serverSocket?.server?.io as SocketServer
 }
 
 // Função para emitir eventos para todos os clientes conectados

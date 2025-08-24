@@ -181,10 +181,19 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Erro na API de geração de prompt:', error)
     
+    // Extrai a seção do corpo da requisição para fallback
+    let section = 'contexto'
+    try {
+      const body = await request.clone().json()
+      section = body.section || 'contexto'
+    } catch {
+      // Usa valor padrão se não conseguir ler o corpo
+    }
+    
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Erro interno do servidor',
-      content: MOCK_RESPONSES[instruction.section || 'contexto'] || 'Conteúdo não disponível.'
+      content: MOCK_RESPONSES[section] || 'Conteúdo não disponível.'
     }, { status: 500 })
   }
 }
